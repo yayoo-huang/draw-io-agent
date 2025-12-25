@@ -56,7 +56,10 @@ export function SaveDialog({
     const handleSave = () => {
         const finalFilename = filename.trim() || defaultFilename
         onSave(finalFilename, format)
-        onOpenChange(false)
+        // Delay closing to allow download to complete
+        setTimeout(() => {
+            onOpenChange(false)
+        }, 500)
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {

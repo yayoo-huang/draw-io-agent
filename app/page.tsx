@@ -178,6 +178,7 @@ export default function Home() {
                 ref={drawioRef}
                 onLoad={onDrawioLoad}
                 onExport={handleDiagramExport}
+                onSave={() => setShowSaveDialog(true)}
                 baseUrl={drawioBaseUrl}
                 urlParameters={{
                   ui: "min",
@@ -185,6 +186,7 @@ export default function Home() {
                   libraries: false,
                   saveAndExit: false,
                   noExitBtn: true,
+                  noSaveBtn: false,
                 }}
               />
             </div>
