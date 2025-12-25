@@ -21,6 +21,7 @@ export default function Home() {
     saveDiagramToFile,
     showSaveDialog,
     setShowSaveDialog,
+    chartXML,
   } = useDiagram()
   const [directory, setDirectory] = useState("")
   const [diagramType, setDiagramType] = useState("system-architecture")
@@ -208,7 +209,7 @@ export default function Home() {
                       variant="outline"
                       size="sm"
                       onClick={() => setShowSaveDialog(true)}
-                      disabled={isAnalyzing}
+                      disabled={isAnalyzing || !chartXML || chartXML.length < 300}
                       className="h-8 px-2 gap-1"
                     >
                       <Download className="h-3.5 w-3.5" />
