@@ -204,28 +204,16 @@ export default function Home() {
               <div className="p-4 border-b border-border bg-muted/30">
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-lg font-semibold">Code Architecture Analyzer</h2>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowSaveDialog(true)}
-                      disabled={isAnalyzing || !chartXML || chartXML.length < 300}
-                      className="h-8 px-2 gap-1"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      <span className="text-xs">Save</span>
-                    </Button>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={handleNewDiagram}
-                      disabled={isAnalyzing}
-                      className="h-8 px-2 gap-1 bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <FileX className="h-3.5 w-3.5" />
-                      <span className="text-xs">New Diagram</span>
-                    </Button>
-                  </div>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleNewDiagram}
+                    disabled={isAnalyzing}
+                    className="h-8 px-2 gap-1 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <FileX className="h-3.5 w-3.5" />
+                    <span className="text-xs">New Diagram</span>
+                  </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">Analyze codebase and generate diagrams</p>
               </div>
