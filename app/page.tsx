@@ -1,17 +1,27 @@
 "use client"
 import { useState } from "react"
 import { DrawIoEmbed } from "react-drawio"
-import { Loader2, FolderOpen, Send, FileX } from "lucide-react"
+import { Loader2, FolderOpen, Send, FileX, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import { useDiagram } from "@/contexts/diagram-context"
 import { STORAGE_KEYS } from "@/lib/storage"
+import { SaveDialog } from "@/components/save-dialog"
 
 const drawioBaseUrl = process.env.NEXT_PUBLIC_DRAWIO_BASE_URL || "https://embed.diagrams.net"
 
 export default function Home() {
-  const { drawioRef, loadDiagram, onDrawioLoad, handleDiagramExport, clearDiagram } = useDiagram()
+  const { 
+    drawioRef, 
+    loadDiagram, 
+    onDrawioLoad, 
+    handleDiagramExport, 
+    clearDiagram,
+    saveDiagramToFile,
+    showSaveDialog,
+    setShowSaveDialog,
+  } = useDiagram()
   const [directory, setDirectory] = useState("")
   const [diagramType, setDiagramType] = useState("system-architecture")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -191,16 +201,28 @@ export default function Home() {
               <div className="p-4 border-b border-border bg-muted/30">
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-lg font-semibold">Code Architecture Analyzer</h2>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleNewDiagram}
-                    disabled={isAnalyzing}
-                    className="h-8 px-2 gap-1 bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <FileX className="h-3.5 w-3.5" />
-                    <span className="text-xs">New Diagram</span>
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSaveDialog(true)}
+                      disabled={isAnalyzing}
+                      className="h-8 px-2 gap-1"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span className="text-xs">Save</span>
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleNewDiagram}
+                      disabled={isAnalyzing}
+                      className="h-8 px-2 gap-1 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <FileX className="h-3.5 w-3.5" />
+                      <span className="text-xs">New Diagram</span>
+                    </Button>
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground">Analyze codebase and generate diagrams</p>
               </div>
@@ -288,6 +310,14 @@ export default function Home() {
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
+      
+      {/* Save Dialog */}
+      <SaveDialog
+        open={showSaveDialog}
+        onOpenChange={setShowSaveDialog}
+        onSave={(filename, format) => saveDiagramToFile(filename, format)}
+        defaultFilename={`diagram-${new Date().toISOString().slice(0, 10)}`}
+      />
     </div>
   )
 }
