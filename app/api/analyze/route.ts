@@ -13,6 +13,7 @@ import {
 import { handleSummarizeTask } from "@/lib/tools/handlers/summarize-task";
 import { summarizeTask } from "@/lib/context/context-prompts";
 import { getSystemPrompt } from "@/lib/prompts/system-prompt";
+import { isReadOnlyTool, isWriteTool } from "@/lib/tools/tool-categories";
 import type { Tool } from "@/lib/types";
 import {
   createUserMessage,
@@ -489,12 +490,25 @@ export async function POST(req: Request) {
             continue;
           }
           
-          // Execute tools and add results to conversation (Cline-style)
-          for (const toolCall of toolCallsInThisTurn) {
-            let result = "";
+          // 🚀 PARALLEL TOOL EXECUTION (Cline-style optimization)
+          // Separate read-only tools (can run in parallel) from write tools (must run serially)
+          console.log(`\n${"⚡".repeat(40)}`);
+          console.log(`⚡ TOOL EXECUTION - Total: ${toolCallsInThisTurn.length} tool(s)`);
+          
+          const readOnlyTools = toolCallsInThisTurn.filter(tc => isReadOnlyTool(tc.name));
+          const writeTools = toolCallsInThisTurn.filter(tc => isWriteTool(tc.name));
+          
+          console.log(`  - Read-only tools (parallel): ${readOnlyTools.length}`);
+          console.log(`  - Write tools (serial): ${writeTools.length}`);
+          console.log(`${"⚡".repeat(40)}\n`);
+          
+          // Helper function to execute a single tool
+          const executeSingleTool = async (toolCall: { id: string; name: string; input: any }): Promise<string> => {
+            console.log(`  Executing: ${toolCall.name}`);
+            const startTime = Date.now();
             
             try {
-              console.log(`Executing tool: ${toolCall.name} with input:`, toolCall.input);
+              let result = "";
               
               switch (toolCall.name) {
                 case "list_directories":
@@ -601,12 +615,48 @@ export async function POST(req: Request) {
                   result = `Unknown tool: ${toolCall.name}`;
               }
               
-              console.log(`Tool result length: ${result.length} characters`);
+              const duration = Date.now() - startTime;
+              console.log(`  ✅ ${toolCall.name} completed in ${duration}ms (result: ${result.length} chars)`);
+              
+              return result;
             } catch (error) {
-              result = `Error executing tool: ${error}`;
-              console.error(`Tool execution error:`, error);
+              const duration = Date.now() - startTime;
+              const errorResult = `Error executing tool: ${error}`;
+              console.error(`  ❌ ${toolCall.name} failed in ${duration}ms:`, error);
+              return errorResult;
             }
+          };
+          
+          // Execute read-only tools in parallel (Cline-style optimization)
+          console.log(`\n⚡ Executing ${readOnlyTools.length} read-only tool(s) in parallel...`);
+          const readOnlyResults = await Promise.all(
+            readOnlyTools.map(tc => executeSingleTool(tc))
+          );
+          
+          // Execute write tools serially (must maintain order)
+          console.log(`⚡ Executing ${writeTools.length} write tool(s) serially...`);
+          const writeResults: string[] = [];
+          for (const tc of writeTools) {
+            const result = await executeSingleTool(tc);
+            writeResults.push(result);
+          }
+          
+          // Combine all tools and results in original order
+          const allToolsWithResults = toolCallsInThisTurn.map(tc => {
+            const isReadOnly = isReadOnlyTool(tc.name);
+            const resultIndex = isReadOnly 
+              ? readOnlyTools.findIndex(t => t.id === tc.id)
+              : writeTools.findIndex(t => t.id === tc.id);
             
+            const result = isReadOnly 
+              ? readOnlyResults[resultIndex]
+              : writeResults[resultIndex];
+            
+            return { toolCall: tc, result };
+          });
+          
+          // Send results to frontend and add to conversation
+          for (const { toolCall, result } of allToolsWithResults) {
             // Send result to frontend
             safeEnqueue(
               encoder.encode(`event: tool_result\ndata: ${JSON.stringify({ 
@@ -615,7 +665,7 @@ export async function POST(req: Request) {
               })}\n\n`)
             );
             
-            // Add tool result to conversation for next LLM turn (KEY: like Cline's coordinator.execute)
+            // Add tool result to conversation for next LLM turn
             await messageHandler.addApiMessage(
               createUserMessage(`<tool_result tool_name="${toolCall.name}">\n${result}\n</tool_result>`)
             );
@@ -629,6 +679,10 @@ export async function POST(req: Request) {
               })
             );
           }
+          
+          console.log(`${"⚡".repeat(40)}`);
+          console.log(`✅ All ${toolCallsInThisTurn.length} tool(s) executed successfully`);
+          console.log(`${"⚡".repeat(40)}\n`);
         }
 
         if (currentTurn >= MAX_TURNS) {
